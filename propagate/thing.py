@@ -49,7 +49,7 @@ class Thing:
             vals, descs = zip(*args)
             for errors in err_pairs:
                 vals, ds = zip(*[e(a) for e, a in zip(errors, vals)])
-                descs = map(lambda x: descs + x, ds)
+                descs = map(lambda d: descs + d, ds)
                 if vals != (a, b):
                     wrong = func(*vals)
                     wrongs[wrong] = itertools.chain(descs)
