@@ -6,20 +6,25 @@ import asyncio, multiprocessing, json, socket
 class CourseServer(asyncio.Protocol):
     
     def __init__(self, loop, exercises):
-        'CourseServer(exercises={name: ExerciseServer})'
+        'CourseServer(exercises={name: socket})'
         self.loop = loop
         self.exercises = exercises
     
     def connection_made(self, transport):
         self.transport = transport
     
+    def parse(self, message):
+        exercise, message = json.loads(message)
+        exercise = self.exercises[exercise]
+        return exercise, message
+    
     def get_exercise(self, exercise, command, ins, outs):
         loop = asyncio.new_event_loop()
         coro = loop.create_connection(
             lambda: CourseClient(command, loop, ins),
-            *exercise)
+            sock=exercise)
         loop.run_until_complete(coro)
-        loop.run_forever()
+        #loop.run_forever()
         loop.close()
         size, res = int(outs.recv()), b''
         ins.send(b'1')
@@ -62,8 +67,9 @@ class ExerciseServer(asyncio.Protocol):
     
     def data_received(self, data):
         message = data.decode()
-        message = self.parse(message)
+        message = json.loads(message)
         res = self.exercise(**message)
+        res = json.dumps(res)
         self.transport.write(res.encode())
 
 if __name__ == '__main__':
