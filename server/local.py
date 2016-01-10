@@ -18,10 +18,10 @@ class CourseServer(asyncio.Protocol):
         exercise = self.exercises[exercise]
         return exercise, message
     
-    def get_exercise(self, exercise, command, ins, outs):
+    def get_exercise(self, exercise, message, ins, outs):
         loop = asyncio.new_event_loop()
         coro = loop.create_connection(
-            lambda: CourseClient(command, loop, ins),
+            lambda: Client(message, loop, ins),
             sock=exercise)
         loop.run_until_complete(coro)
         #loop.run_forever()
@@ -35,11 +35,26 @@ class CourseServer(asyncio.Protocol):
     def data_received(self, data):
         message = data.decode()
         exercise, command = self.parse(message)
-        with ins, outs as socket.socketpair():
+        with socket.socketpair() as ins, outs:
             res = self.get_exercise(exercise, command, ins, outs)
         self.transport.write(res)
 
-class CourseClient(asyncio.Protocol):
+class ExerciseServer(asyncio.Protocol):
+    
+    def __init__(self, exercise):
+        self.exercise = exercise
+    
+    def connection_made(self, transport):
+        self.transport = transport
+    
+    def data_received(self, data):
+        message = data.decode()
+        message = json.loads(message)
+        res = self.exercise(**message)
+        res = json.dumps(res)
+        self.transport.write(res.encode())
+
+class Client(asyncio.Protocol):
     
     def __init__(self, message, loop, sock):
         self.message = message
@@ -56,21 +71,6 @@ class CourseClient(asyncio.Protocol):
     
     def connection_lost(self, exc):
         self.loop.stop()
-
-class ExerciseServer(asyncio.Protocol):
-    
-    def __init__(self, exercise):
-        self.exercise = exercise
-    
-    def connection_made(self, transport):
-        self.transport = transport
-    
-    def data_received(self, data):
-        message = data.decode()
-        message = json.loads(message)
-        res = self.exercise(**message)
-        res = json.dumps(res)
-        self.transport.write(res.encode())
 
 if __name__ == '__main__':
     pass
