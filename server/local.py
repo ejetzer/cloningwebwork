@@ -73,4 +73,19 @@ class Client(asyncio.Protocol):
         self.loop.stop()
 
 if __name__ == '__main__':
-    pass
+    loop = asyncio.get_event_loop()
+    # Make exercises
+    exs = {}
+    # Make course
+    coro = loop.create_server(lambda: CourseServer(loop, exs),
+                              '127.0.0.1', 8888)
+    # Launch!
+    print('Launch.')
+    try:
+        server = loop.run_until_complete(coro)
+        print('Serving on', server.sockets[0].getsockname())
+        loop.run_forever()
+    except KeyboardInterrupt:
+        print('^C: Exit.')
+    loop.close()
+    print('Done.')
